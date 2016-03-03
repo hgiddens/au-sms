@@ -20,3 +20,6 @@ scalacOptions in Test in ThisBuild += "-Yrangepos"
 autoAPIMappings in ThisBuild := true
 
 lazy val core = project
+lazy val http4sClient = project.
+  in(file("http4s-client")).
+  dependsOn(core % "compile->compile;test->test")
