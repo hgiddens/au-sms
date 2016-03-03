@@ -9,6 +9,12 @@ object MessageSpec extends Specification with ScalaCheck {
   "fromString works on length, not bytes" in prop { s: String =>
     Message.fromString(s) must beSome.iff(s.length < Message.maxLength)
   }
+
+  "apply" should {
+    "construct a Message successfully" in {
+      Message("this is a message").value ==== "this is a message"
+    }
+  }
 }
 
 object PhoneNumberSpec extends Specification {
@@ -38,6 +44,12 @@ object PhoneNumberSpec extends Specification {
       )
       foreach(invalidNumbers) { phone =>
         PhoneNumber.fromString(phone) must beNone
+      }
+    }
+
+    "apply" should {
+      "construct a PhoneNumber successfully" in {
+        PhoneNumber("0400000000").value ==== "0400000000"
       }
     }
   }

@@ -30,7 +30,7 @@ object Message {
       s.tree match {
         case Literal(Constant(s: String)) =>
           fromString(s) match {
-            case Some(_) => c.Expr(q"org.onnow.telstra.sms.Message.fromString($s).get")
+            case Some(_) => c.Expr(q"com.github.hgiddens.telstrasms.Message.fromString($s).get")
             case _ => c.abort(c.enclosingPosition, s"'$s' is too long for a SMS message ($maxLength chars)")
           }
 
@@ -91,7 +91,7 @@ object PhoneNumber {
       s.tree match {
         case Literal(Constant(s: String)) =>
           fromString(s) match {
-            case Some(_) => c.Expr(q"org.onnow.telstra.sms.PhoneNumber.fromString($s).get")
+            case Some(_) => c.Expr(q"com.github.hgiddens.telstrasms.PhoneNumber.fromString($s).get")
             case _ => c.abort(c.enclosingPosition, s"'$s' is not a valid phone number")
           }
 
