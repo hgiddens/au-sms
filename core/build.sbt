@@ -8,3 +8,5 @@ libraryDependencies ++= Seq(
   "org.specs2" %% "specs2-core" % Versions.specs2 % Test,
   "org.specs2" %% "specs2-scalacheck" % Versions.specs2 % Test
 )
+
+publishArtifact in Test := true
