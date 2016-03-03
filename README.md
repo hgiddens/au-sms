@@ -1,6 +1,8 @@
-# A Scala client for the [Telstra SMS API](https://dev.telstra.com/content/sms-api-0)
+## A Scala client for the [Telstra SMS API](https://dev.telstra.com/content/sms-api-0)
 
-## Getting started
+[![Build Status](https://api.travis-ci.org/hgiddens/telstra-sms.svg)](https://travis-ci.org/hgiddens/telstra-sms)
+
+### Getting started
 
 Add the following to your `build.sbt`:
 
