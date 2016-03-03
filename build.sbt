@@ -18,6 +18,8 @@ scalacOptions in ThisBuild ++= Seq(
 scalacOptions in Test in ThisBuild += "-Yrangepos"
 
 autoAPIMappings in ThisBuild := true
+homepage in ThisBuild := Some(url("https://github.com/hgiddens/telstra-sms"))
+licenses in ThisBuild := Seq("MIT" -> url("https://opensource.org/licenses/MIT"))
 
 lazy val core = project
 lazy val http4sClient = project.
