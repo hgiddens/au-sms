@@ -8,6 +8,7 @@ import java.util.Date
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success, Try }
 import scalaz.{ Equal, Show }
+import scalaz.Scalaz._
 
 private[telstrasms] final case class SendRequest(to: PhoneNumber, body: Message)
 private[telstrasms] object SendRequest {
@@ -81,4 +82,23 @@ object MessageResponse {
       }
       message <- (c --\ "content").as[String]
     } yield apply(id, status, date, message))
+}
+
+final case class MessageStatusResponse(status: DeliveryStatus)
+object MessageStatusResponse {
+  private[this] def parseStatus: PartialFunction[String, DeliveryStatus] = {
+    case "PEND" => DeliveryStatus.Pending
+    case "SENT" => DeliveryStatus.Sent
+    case "DELIVRD" => DeliveryStatus.Delivered
+    case "READ" => DeliveryStatus.Read
+  }
+
+  implicit def decodeJson: DecodeJson[MessageStatusResponse] =
+    DecodeJson(c => for {
+      statusString <- (c --\ "status").as[String]
+      status <- parseStatus.lift(statusString).cata(
+        DecodeResult.ok,
+        DecodeResult.fail(s"Unknown status '$statusString'", (c --\ "status").history)
+      )
+    } yield MessageStatusResponse(status))
 }

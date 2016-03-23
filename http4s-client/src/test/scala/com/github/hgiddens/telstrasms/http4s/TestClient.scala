@@ -28,6 +28,17 @@ private[http4s] object TestClient extends Client {
           case (Authorization(Authorization(OAuth2BearerToken(`accessToken`))), `Content-Type`(`jsonContentType`)) =>
             Accepted().withBody(Json("messageId" := messageId))
         }
+
+      case GET -> Root / "v1" / "sms" / "messages" / `messageId` =>
+        req.headers match {
+          case Authorization(Authorization(OAuth2BearerToken(`accessToken`))) =>
+            Ok().withBody(Json(
+              "to" := "0400000000",
+              "receivedTimestamp" := "2015-02-05T14:10:14+11:00",
+              "sentTimestamp" := "2015-02-05T14:10:12+11:00",
+              "status" := "DELIVRD"
+            ))
+        }
     }
 
   def shutdown =

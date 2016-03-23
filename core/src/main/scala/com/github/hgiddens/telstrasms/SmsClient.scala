@@ -14,4 +14,11 @@ trait SmsClient[F[_]] {
    * @return the ID of the sent message.
    */
   def sendMessage(to: PhoneNumber, message: Message): F[MessageId]
+
+  /**
+   * Determines the status of a previously sent message.
+   *
+   * @param message the ID of the sent message.
+   */
+  def messageStatus(message: MessageId): F[DeliveryStatus]
 }

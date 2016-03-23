@@ -4,7 +4,6 @@ package http4s
 import Generators._
 import java.util.Date
 import org.specs2.ScalaCheck
-import org.specs2.concurrent.ExecutionEnv
 import org.specs2.matcher.{ MatcherMacros, TaskMatchers }
 import org.specs2.mutable.Specification
 
@@ -54,6 +53,16 @@ object Http4sSmsClientSpec extends Specification with MatcherMacros with ScalaCh
         client <- Http4sSmsClient(TestClient, TestClient.key, TestClient.secret)
         messageId <- client.sendMessage(phoneNumber, message)
       } yield messageId) must returnValue(be_===(MessageId(TestClient.messageId)))
+    }
+  }
+
+  "check a message's status" should {
+    "return the status for the sent message" in {
+      (for {
+        client <- Http4sSmsClient(TestClient, TestClient.key, TestClient.secret)
+        messageId = MessageId(TestClient.messageId)
+        status <- client.messageStatus(messageId)
+      } yield status) must returnValue(DeliveryStatus.Delivered)
     }
   }
 }

@@ -42,6 +42,8 @@ final case class Token(value: String, expires: Date)
 final class Http4sSmsClient(client: Client, key: String, secret: String, private[http4s] val currentToken: TMVar[Token]) extends SmsClient[Task] {
   private[this] val log = getLogger
   private[this] val margin = 1.minute
+  private[this] val oauthBase = uri("https://api.telstra.com/v1/oauth")
+  private[this] val smsBase = uri("https://api.telstra.com/v1/sms")
 
   private[http4s] def freshen[A](body: Token => Task[A]): Task[A] =
     for {
@@ -53,9 +55,31 @@ final class Http4sSmsClient(client: Client, key: String, secret: String, private
       result <- body(current)
     } yield result
 
+  private[http4s] def token: Task[Token] = {
+    val request = oauthBase / "token" +?
+      ("client_id", key) +?
+      ("client_secret", secret) +?
+      ("grant_type", "client_credentials") +?
+      ("scope", "SMS")
+
+    val run = for {
+      now <- Task.delay(new Date)
+      response <- client(request)
+      status = response.status
+      _ <- Task.fail(Failure(s"Unexpected response with code $status")).unlessM(status == Status.Ok)
+      tokenResponse <- response.as[TokenResponse]
+      _ <- Task.delay(log.debug(s"Token refreshed, expiring in ${tokenResponse.duration.toSeconds}s"))
+    } yield tokenResponse.asToken(now)
+
+    run.onFinish {
+      case Some(t) => Task.delay(log.error(t)("Failed to refresh access token"))
+      case _ => Task.now(())
+    }
+  }
+
   def sendMessage(to: PhoneNumber, message: Message): Task[MessageId] = {
     def request(token: Token) =
-      Request(Method.POST, uri("https://api.telstra.com/v1/sms/messages")).
+      Request(Method.POST, smsBase / "messages").
         withBody(SendRequest(to, message)).
         putHeaders(
           Authorization(OAuth2BearerToken(token.value)),
@@ -77,28 +101,25 @@ final class Http4sSmsClient(client: Client, key: String, secret: String, private
     }
   }
 
-  private[http4s] def token: Task[Token] = {
-    val request = uri("https://api.telstra.com/v1/oauth/token") +?
-      ("client_id", key) +?
-      ("client_secret", secret) +?
-      ("grant_type", "client_credentials") +?
-      ("scope", "SMS")
+  def messageStatus(message: MessageId): Task[DeliveryStatus] = {
+    def request(token: Token) =
+      // TODO: path values need encoding
+      Request(Method.GET, smsBase / "messages" / message.value).
+        putHeaders(Authorization(OAuth2BearerToken(token.value)))
 
-    val run = for {
-      now <- Task.delay(new Date)
-      response <- client(request)
-      status = response.status
-      _ <- Task.fail(Failure(s"Unexpected response with code $status")).unlessM(status == Status.Ok)
-      tokenResponse <- response.as[TokenResponse]
-      _ <- Task.delay(log.debug(s"Token refreshed, expiring in ${tokenResponse.duration.toSeconds}s"))
-    } yield tokenResponse.asToken(now)
+    def run(token: Token) =
+      for {
+        response <- client(request(token))
+        _ <- Task.fail(Failure(s"Unexpected response with code ${response.status}")).unlessM(response.status == Status.Ok)
+        status <- response.as[MessageStatusResponse]
+        _ <- Task.delay(log.debug(s"Message status of ${message.shows} is ${status.status.shows}"))
+      } yield status.status
 
-    run.onFinish {
-      case Some(t) => Task.delay(log.error(t)("Failed to refresh access token"))
+    freshen(run).onFinish {
+      case Some(t) => Task.delay(log.error(t)("Failed to check status of SMS"))
       case _ => Task.now(())
     }
   }
-
 }
 object Http4sSmsClient {
   final case class Failure(message: String) extends RuntimeException(message)

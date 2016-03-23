@@ -1,7 +1,6 @@
 package com.github.hgiddens.telstrasms
 
 import argonaut.DecodeJson
-import java.util.Date
 import monocle.{ Iso, Prism }
 import monocle.macros.GenIso
 import scala.reflect.macros.blackbox
@@ -115,5 +114,23 @@ object PhoneNumber {
     Equal.equalA
 
   implicit def show: Show[PhoneNumber] =
+    Show.showA
+}
+
+sealed trait DeliveryStatus
+object DeliveryStatus {
+  /** The message has been delivered. */
+  case object Delivered extends DeliveryStatus
+  /** The message has not yet been sent. */
+  case object Pending extends DeliveryStatus
+  /** The message has been delivered and a response has been received. */
+  case object Read extends DeliveryStatus
+  /** The message has been sent, but not delivered. */
+  case object Sent extends DeliveryStatus
+
+  implicit def equal: Equal[DeliveryStatus] =
+    Equal.equalA
+
+  implicit def show: Show[DeliveryStatus] =
     Show.showA
 }
