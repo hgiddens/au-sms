@@ -1,7 +1,7 @@
-package com.github.hgiddens.telstrasms
+package com.github.hgiddens.ausms
 
 /**
- * A client for the [[https://dev.telstra.com/content/sms-getting-started Telstra SMS API]].
+ * A client for sending SMS messages.
  *
  * @tparam F the context in which results will be returned, e.g. [[scala.concurrent.Future]]
  */

@@ -1,4 +1,5 @@
-package com.github.hgiddens.telstrasms.http4s
+package com.github.hgiddens.ausms
+package telstra
 
 import scalaz.concurrent.{ MVar, Task }
 import scalaz.effect.IO
@@ -8,7 +9,7 @@ import scalaz.effect.IO
  *
  * @tparam A the type of the contained value.
  */
-private[http4s] sealed trait TMVar[A] {
+private[telstra] sealed trait TMVar[A] {
   def put(a: => A): Task[Unit]
   def take: Task[A]
 
@@ -28,7 +29,7 @@ private[http4s] sealed trait TMVar[A] {
       _ <- put(r._1)
     } yield r._2
 }
-private[http4s] object TMVar {
+private[telstra] object TMVar {
   private[this] def task[B](io: => IO[B]): Task[B] =
     Task.delay(io.unsafePerformIO)
   def newTMVar[A](a: A): Task[TMVar[A]] =

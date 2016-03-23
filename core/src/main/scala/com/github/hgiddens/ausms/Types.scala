@@ -1,4 +1,4 @@
-package com.github.hgiddens.telstrasms
+package com.github.hgiddens.ausms
 
 import argonaut.DecodeJson
 import monocle.{ Iso, Prism }
@@ -10,7 +10,7 @@ import scalaz.Scalaz._
 /**
  * The body of a SMS message.
  *
- * @param value the message content. Has at most [[com.github.hgiddens.telstrasms.Message.maxLength]] characters.
+ * @param value the message content. Has at most [[com.github.hgiddens.ausms.Message.maxLength]] characters.
  */
 final class Message private[Message] (val value: String) extends AnyVal {
   override def toString =
@@ -29,7 +29,7 @@ object Message {
       s.tree match {
         case Literal(Constant(s: String)) =>
           fromString(s) match {
-            case Some(_) => c.Expr(q"com.github.hgiddens.telstrasms.Message.fromString($s).get")
+            case Some(_) => c.Expr(q"com.github.hgiddens.ausms.Message.fromString($s).get")
             case _ => c.abort(c.enclosingPosition, s"'$s' is too long for a SMS message ($maxLength chars)")
           }
 
@@ -90,7 +90,7 @@ object PhoneNumber {
       s.tree match {
         case Literal(Constant(s: String)) =>
           fromString(s) match {
-            case Some(_) => c.Expr(q"com.github.hgiddens.telstrasms.PhoneNumber.fromString($s).get")
+            case Some(_) => c.Expr(q"com.github.hgiddens.ausms.PhoneNumber.fromString($s).get")
             case _ => c.abort(c.enclosingPosition, s"'$s' is not a valid phone number")
           }
 

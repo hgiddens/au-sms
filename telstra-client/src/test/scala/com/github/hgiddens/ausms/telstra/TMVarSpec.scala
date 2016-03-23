@@ -1,4 +1,5 @@
-package com.github.hgiddens.telstrasms.http4s
+package com.github.hgiddens.ausms
+package telstra
 
 import org.scalacheck.{ Arbitrary, Gen }
 import org.scalacheck.Arbitrary.arbitrary

@@ -1,5 +1,5 @@
-package com.github.hgiddens.telstrasms
-package http4s
+package com.github.hgiddens.ausms
+package telstra
 
 import argonaut.Json
 import argonaut.Argonaut._

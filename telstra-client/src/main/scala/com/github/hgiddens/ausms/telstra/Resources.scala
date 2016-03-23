@@ -1,5 +1,5 @@
-package com.github.hgiddens.telstrasms
-package http4s
+package com.github.hgiddens.ausms
+package telstra
 
 import argonaut.{ DecodeJson, DecodeResult, EncodeJson, Json }
 import argonaut.Argonaut._
@@ -10,25 +10,25 @@ import scala.util.{ Failure, Success, Try }
 import scalaz.{ Equal, Show }
 import scalaz.Scalaz._
 
-private[telstrasms] final case class SendRequest(to: PhoneNumber, body: Message)
-private[telstrasms] object SendRequest {
+private[ausms] final case class SendRequest(to: PhoneNumber, body: Message)
+private[ausms] object SendRequest {
   implicit def encodeJson: EncodeJson[SendRequest] =
     EncodeJson(request => Json("to" := request.to.value, "body" := request.body.value))
 }
 
-private[telstrasms] final case class SendResponse(id: MessageId)
-private[telstrasms] object SendResponse {
+private[ausms] final case class SendResponse(id: MessageId)
+private[ausms] object SendResponse {
   implicit def decodeJson: DecodeJson[SendResponse] =
     DecodeJson(c => for {
       id <- (c --\ "messageId").as[MessageId]
     } yield apply(id))
 }
 
-private[telstrasms] final case class TokenResponse(accessToken: String, duration: Duration) {
+private[ausms] final case class TokenResponse(accessToken: String, duration: Duration) {
   def asToken(base: Date): Token =
     Token(accessToken, new Date(base.getTime + duration.toMillis))
 }
-private[telstrasms] object TokenResponse {
+private[ausms] object TokenResponse {
   implicit def decodeJson: DecodeJson[TokenResponse] =
     DecodeJson(c => for {
       accessToken <- (c --\ "access_token").as[String]

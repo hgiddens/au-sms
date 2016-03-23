@@ -1,7 +1,7 @@
-package com.github.hgiddens.telstrasms
-package http4s
+package com.github.hgiddens.ausms
+package telstra
 
-import Http4sSmsClient.Failure
+import TelstraSmsClient.Failure
 import JsonHelpers._
 import argonaut.{ DecodeJson, EncodeJson }
 import java.util.Date
@@ -16,7 +16,7 @@ import scala.concurrent.duration._
 import scalaz.Scalaz._
 import scalaz.concurrent.Task
 
-private[http4s] object JsonHelpers {
+private[telstra] object JsonHelpers {
   implicit def jsonEntityDecoder[A: DecodeJson]: EntityDecoder[A] =
     jsonOf
   implicit def jsonEntityEncoder[A: EncodeJson]: EntityEncoder[A] =
@@ -32,20 +32,22 @@ private[http4s] object JsonHelpers {
 final case class Token(value: String, expires: Date)
 
 /**
- * [[SmsClient]] that delegates to an underlying [[Client]] instance.
+ * [[SmsClient]] for the [[https://dev.telstra.com/content/sms-getting-started Telstra SMS API]].
+ *
+ * Delegates to an underlying [[Client]] instance.
  *
  * @param client the http4s [[Client]] to use for HTTP communication.
  * @param key your Telstra SMS client ID.
  * @param secret your Telstra SMS client secret.
  * @param currentToken storage for the current token. Must not be empty.
  */
-final class Http4sSmsClient(client: Client, key: String, secret: String, private[http4s] val currentToken: TMVar[Token]) extends SmsClient[Task] {
+final class TelstraSmsClient(client: Client, key: String, secret: String, private[telstra] val currentToken: TMVar[Token]) extends SmsClient[Task] {
   private[this] val log = getLogger
   private[this] val margin = 1.minute
   private[this] val oauthBase = uri("https://api.telstra.com/v1/oauth")
   private[this] val smsBase = uri("https://api.telstra.com/v1/sms")
 
-  private[http4s] def freshen[A](body: Token => Task[A]): Task[A] =
+  private[telstra] def freshen[A](body: Token => Task[A]): Task[A] =
     for {
       now <- Task.delay(new Date)
       current <- currentToken.modify { current =>
@@ -55,7 +57,7 @@ final class Http4sSmsClient(client: Client, key: String, secret: String, private
       result <- body(current)
     } yield result
 
-  private[http4s] def token: Task[Token] = {
+  private[telstra] def token: Task[Token] = {
     val request = oauthBase / "token" +?
       ("client_id", key) +?
       ("client_secret", secret) +?
@@ -121,12 +123,12 @@ final class Http4sSmsClient(client: Client, key: String, secret: String, private
     }
   }
 }
-object Http4sSmsClient {
+object TelstraSmsClient {
   final case class Failure(message: String) extends RuntimeException(message)
 
-  def apply(client: Client, key: String, secret: String): Task[Http4sSmsClient] =
+  def apply(client: Client, key: String, secret: String): Task[TelstraSmsClient] =
     for {
       // Supply an initially invalid token so the first request refreshes it.
       token <- TMVar.newTMVar(Token("", new Date(0)))
-    } yield new Http4sSmsClient(client, key, secret, token)
+    } yield new TelstraSmsClient(client, key, secret, token)
 }

@@ -1,4 +1,4 @@
-name := "telstra-sms-http4s"
+name := "au-sms-telstra"
 
 libraryDependencies ++= Seq(
   "org.http4s" %% "http4s-argonaut" % Versions.http4s,

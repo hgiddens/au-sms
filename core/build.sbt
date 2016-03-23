@@ -1,4 +1,4 @@
-name := "telstra-sms-core"
+name := "au-sms-core"
 
 libraryDependencies ++= Seq(
   "io.argonaut" %% "argonaut" % "6.1",

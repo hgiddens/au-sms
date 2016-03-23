@@ -1,5 +1,5 @@
-package com.github.hgiddens.telstrasms
-package http4s
+package com.github.hgiddens.ausms
+package telstra
 
 import JsonHelpers._
 import argonaut.Json
@@ -10,7 +10,7 @@ import org.http4s.dsl._
 import org.http4s.headers.{ Authorization, `Content-Type` }
 import scalaz.concurrent.Task
 
-private[http4s] object TestClient extends Client {
+private[telstra] object TestClient extends Client {
   val key = "key"
   val secret = "secret"
   val accessToken = "g85MslKJGuDIPhOklSgNLbWFPu5g"

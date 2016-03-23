@@ -1,4 +1,4 @@
-package com.github.hgiddens.telstrasms
+package com.github.hgiddens.ausms
 
 import Generators._
 import org.specs2.ScalaCheck
