@@ -1,4 +1,5 @@
 package com.github.hgiddens.telstrasms
+package http4s
 
 import argonaut.{ DecodeJson, DecodeResult, EncodeJson, Json }
 import argonaut.Argonaut._

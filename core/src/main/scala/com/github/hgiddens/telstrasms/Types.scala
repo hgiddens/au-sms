@@ -117,11 +117,3 @@ object PhoneNumber {
   implicit def show: Show[PhoneNumber] =
     Show.showA
 }
-
-/**
- * An authentication token for the SMS API.
- *
- * @param value the token's value.
- * @param expires when the token will expire.
- */
-final case class Token(value: String, expires: Date)
