@@ -2,15 +2,14 @@ package com.github.hgiddens.ausms
 package smscentral
 
 import java.util.UUID
-import org.http4s.{ Method, Request, Response, Status, UrlForm }
+import org.http4s.{ Method, Request, Status, UrlForm }
 import org.http4s.Uri.uri
 import org.http4s.client.Client
 import org.http4s.scalaxml._
 import org.log4s.getLogger
-import scala.util.{ Failure, Success, Try }
+import scala.util.Try
 import scala.xml.Elem
 import scalaz.Scalaz._
-import scalaz.{ EitherT, \/ }
 import scalaz.concurrent.Task
 
 abstract class SmsCentralException(message: String) extends RuntimeException(message)
@@ -22,7 +21,7 @@ final class SmsCentralClient(client: Client, config: SmsCentralClient.Config) ex
   private[this] val base = uri("https://my.smscentral.com.au/api/v3.2")
   private[this] val ErrorRx = """(\d{1,8})\s*(.*)""".r
 
-  def sendMessage(to: PhoneNumber, message: Message): Task[MessageId] = {
+  def sendMessage(to: PhoneNumber, message: Message): Task[MessageId] =
     for {
       uuid <- Task.delay(UUID.randomUUID())
       id = MessageId(uuid.toString)
@@ -41,12 +40,11 @@ final class SmsCentralClient(client: Client, config: SmsCentralClient.Config) ex
       body <- response.as[String]
       _ <- body match {
         case "0" => Task.now(())
-        case ErrorRx(code, message) => Task.fail(new SmsCentralFailure(code.toInt, message))
+        case ErrorRx(code, error) => Task.fail(new SmsCentralFailure(code.toInt, error))
         case _ => Task.fail(new SmsCentralError(body))
       }
       _ <- Task.delay(log.debug(s"Message sent to ${to.shows} with id ${id.shows}"))
     } yield id
-  }
 
   def messageStatus(message: MessageId): Task[DeliveryStatus] = {
     def parseSuccess(elem: Elem): Task[DeliveryStatus] =

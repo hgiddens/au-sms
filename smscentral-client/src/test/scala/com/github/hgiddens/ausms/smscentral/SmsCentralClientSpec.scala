@@ -26,18 +26,11 @@ private[smscentral] final class TestClient(config: SmsCentralClient.Config) exte
     Checker(form => form.getFirst(parameter).toSuccessNel(s"$parameter required but absent").void)
   private[this] def check(parameter: String, predicate: String => Boolean): Checker =
     Checker(form => form.getFirst(parameter).filter(predicate).toSuccessNel(s"$parameter value mismatch").void)
-  private[this] def urlSafe: Char => Boolean =
-    (('A' to 'Z') ++ ('a' to 'z') ++ ('0' to '9') :+ '*' :+ '-' :+ '.' :+ '_' :+ '%').toSet
-  private[this] def urlEncoded(s: String): Boolean =
-    s.forall(urlSafe)
 
   def prepare(request: Request) =
     request match {
       case POST -> Root / "api" / "v3.2" =>
         request.as[UrlForm].flatMap { form =>
-          // TODO: RECIPIENTMESSAGES?
-          // TODO: FILE_LIST/FILE_HASH
-          // TODO: REPLYTYPE/REPLYPATH
           val validate =
             check("USERNAME", _ === config.username) |+|
               check("PASSWORD", _ === config.password) |+|
