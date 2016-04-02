@@ -17,6 +17,11 @@ scalacOptions in ThisBuild ++= Seq(
 )
 scalacOptions in Test in ThisBuild += "-Yrangepos"
 
+libraryDependencies in ThisBuild += compilerPlugin("org.spire-math" %% "kind-projector" % "0.7.1")
+dependencyOverrides in ThisBuild ++= Set(
+  "org.scalaz" %% "scalaz-core" % "7.1.7"
+)
+
 autoAPIMappings in ThisBuild := true
 homepage in ThisBuild := Some(url("https://github.com/hgiddens/au-sms"))
 licenses in ThisBuild := Seq("MIT" -> url("https://opensource.org/licenses/MIT"))
@@ -24,4 +29,7 @@ licenses in ThisBuild := Seq("MIT" -> url("https://opensource.org/licenses/MIT")
 lazy val core = project
 lazy val telstraClient = project.
   in(file("telstra-client")).
+  dependsOn(core % "compile->compile;test->test")
+lazy val smsCentralClient = project.
+  in(file("smscentral-client")).
   dependsOn(core % "compile->compile;test->test")

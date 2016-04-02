@@ -12,6 +12,9 @@ object Generators {
       message <- Gen.fromOption(Message.fromString(content))
     } yield message)
 
+  implicit def arbMessageId: Arbitrary[MessageId] =
+    Arbitrary(Gen.resultOf(MessageId.apply _))
+
   implicit def arbPhoneNumber: Arbitrary[PhoneNumber] =
     Arbitrary(for {
       digits <- Gen.choose(0, 9).replicateM(8)
