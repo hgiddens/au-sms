@@ -3,7 +3,6 @@ package telstra
 
 import argonaut.{ DecodeJson, DecodeResult, EncodeJson, Json }
 import argonaut.Argonaut._
-import java.time.OffsetDateTime
 import java.util.Date
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success, Try }
@@ -38,50 +37,6 @@ private[ausms] object TokenResponse {
         case Failure(_) => DecodeResult.fail("Bad token expiry", (c --\ "expires_in").history)
       }
     } yield apply(accessToken, expires))
-}
-
-/**
- * The response the web hook receives when someone replies to a message.
- *
- * @param id the ID of the message this response is to.
- * @param status the status of the message.
- * @param acknowledged when the message was received.
- * @param content the content of the response.
- */
-final case class MessageResponse(id: MessageId, status: MessageResponse.Status, acknowledged: Date, content: String)
-object MessageResponse {
-  sealed trait Status
-  object Status {
-    /** The message has been received by the network or handset. */
-    case object Read extends Status
-    case object Undeliverable extends Status
-
-    implicit def equal: Equal[Status] =
-      Equal.equalA
-
-    implicit def show: Show[Status] =
-      Show.showA
-  }
-
-  private[this] def parseDate(s: String): Option[Date] =
-    Try(Date.from(OffsetDateTime.parse(s).toInstant)).toOption
-
-  implicit def decodeJson: DecodeJson[MessageResponse] =
-    DecodeJson(c => for {
-      id <- (c --\ "messageId").as[MessageId]
-      statusString <- (c --\ "status").as[String]
-      status <- statusString match {
-        case "READ" => DecodeResult.ok(Status.Read)
-        case "UNDVBL" => DecodeResult.ok(Status.Undeliverable)
-        case s => DecodeResult.fail(s"Unknown status '$s'", (c --\ "status").history)
-      }
-      dateString <- (c --\ "acknowledgedTimestamp").as[String]
-      date <- parseDate(dateString) match {
-        case Some(date) => DecodeResult.ok(date)
-        case _ => DecodeResult.fail(s"Unable to parse timestamp '$dateString'", (c --\ "acknowledgedTimestamp").history)
-      }
-      message <- (c --\ "content").as[String]
-    } yield apply(id, status, date, message))
 }
 
 final case class MessageStatusResponse(status: DeliveryStatus)
