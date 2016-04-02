@@ -32,7 +32,7 @@ final class SmsCentralClient(client: Client, config: SmsCentralClient.Config) ex
         "ACTION" -> "send",
         "ORIGINATOR" -> config.originator,
         "REFERENCE" -> id.value,
-        "RECIPIENT" -> to.value,
+        "RECIPIENT" -> ("61" + to.value.tail),
         "MESSAGE_TEXT" -> message.value
       )
       request <- Request(Method.POST, base).withBody(params)

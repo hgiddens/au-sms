@@ -43,7 +43,7 @@ private[smscentral] final class TestClient(config: SmsCentralClient.Config) exte
               check("PASSWORD", _ === config.password) |+|
               check("ACTION", _ === "send") |+|
               check("ORIGINATOR", _ === config.originator) |+|
-              check("RECIPIENT") |+|
+              check("RECIPIENT", _.startsWith("614")) |+|
               check("MESSAGE_TEXT", _ /== "fail") |+|
               check("REFERENCE")
 
@@ -89,7 +89,6 @@ private[smscentral] final class TestClient(config: SmsCentralClient.Config) exte
 }
 
 object SmsCentralClientSpec extends Specification with MatcherMacros with ScalaCheck with TaskMatchers {
-  // TODO ORIGINATOR cannot be >11 chars (letters + numbers only) or 'shared' or 'dedicated'
   def config = SmsCentralClient.Config("test username", "test password", "testorig").get
   def underlying = new TestClient(config)
   def client = new SmsCentralClient(underlying, config)
