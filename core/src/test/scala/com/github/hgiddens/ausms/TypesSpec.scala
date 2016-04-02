@@ -6,8 +6,12 @@ import org.specs2.mutable.Specification
 import scalaz.Equal
 
 object MessageSpec extends Specification with ScalaCheck {
+  def smsLength(s: String): Double =
+    if (s.forall(Message.restrictedGsm)) (s.length + s.count(Message.restrictedGsmExtension)) * 7 / 8.0
+    else s.length * 2.0
+
   "fromString works on length, not bytes" in prop { s: String =>
-    Message.fromString(s) must beSome.iff(s.length < Message.maxLength)
+    Message.fromString(s) must beSome.iff(smsLength(s) <= 140)
   }
 
   "apply" should {

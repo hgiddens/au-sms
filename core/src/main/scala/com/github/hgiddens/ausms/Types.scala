@@ -19,9 +19,16 @@ final class Message private[Message] (val value: String) extends AnyVal {
 object Message {
   def apply(s: String): Message = macro macros.messageLiteralMacro
 
-  val maxLength = 160
+  // SMS Central is documented as only supporting a subset of the GSM alphabet
+  private[ausms] val restrictedGsm =
+    Set('~', '@', '*', '-', '_', '=', '+', ']', '[', '?', '<', '>', ',', '.', ';', ':', '/', '\\', '{', '}', ' ', '\n', '\r') ++
+      ('A' to 'Z') ++ ('a' to 'z') ++ ('0' to '9') ++ ('!' to ')')
+  private[ausms] val restrictedGsmExtension =
+    Set('^', '{', '}', '\\', '[', '~', ']')
+
   def fromString(s: String): Option[Message] =
-    (s.length <= maxLength).option(new Message(s))
+    if (s.forall(restrictedGsm)) (s.length + s.count(restrictedGsmExtension) <= 160).option(new Message(s))
+    else (s.length <= 70).option(new Message(s))
 
   object macros {
     def messageLiteralMacro(c: blackbox.Context)(s: c.Expr[String]): c.Expr[Message] = {
@@ -30,7 +37,7 @@ object Message {
         case Literal(Constant(s: String)) =>
           fromString(s) match {
             case Some(_) => c.Expr(q"com.github.hgiddens.ausms.Message.fromString($s).get")
-            case _ => c.abort(c.enclosingPosition, s"'$s' is too long for a SMS message ($maxLength chars)")
+            case _ => c.abort(c.enclosingPosition, s"'$s' is too long for a SMS message")
           }
 
         case _ =>
