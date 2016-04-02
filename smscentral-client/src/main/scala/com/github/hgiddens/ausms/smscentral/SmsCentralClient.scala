@@ -73,7 +73,7 @@ final class SmsCentralClient(client: Client, config: SmsCentralClient.Config) ex
 
     for {
       response <- client(request)
-      elem <- response.as[Elem]
+      elem <- response.as[Elem].or(Task.fail(new SmsCentralError("Failure parsing response as XML")))
       status <- parseSuccess(elem).or(Task.fail(handleFailure(elem)))
     } yield status
   }
