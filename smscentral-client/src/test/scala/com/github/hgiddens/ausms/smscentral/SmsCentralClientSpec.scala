@@ -4,7 +4,7 @@ package smscentral
 import Generators._
 import java.util.UUID
 import org.http4s.{ Request, Response, UrlForm }
-import org.http4s.client.Client
+import org.http4s.client.{ Client, DisposableResponse }
 import org.http4s.dsl._
 import org.http4s.scalaxml._
 import org.scalacheck.{ Arbitrary, Gen }
@@ -13,11 +13,12 @@ import org.specs2.ScalaCheck
 import org.specs2.matcher.{ Matcher, MatcherMacros, TaskMatchers }
 import org.specs2.mutable.Specification
 import scala.util.Try
+import scalaz.Kleisli
 import scalaz.concurrent.Task
 
-final case class SimpleClient(fn: Request => Task[Response]) extends Client {
-  def prepare(request: Request) = fn(request)
-  def shutdown = Task.now(())
+object SimpleClient {
+  def apply(fn: Request => Task[Response]): Client =
+    Client(Kleisli(fn).map(new DisposableResponse(_, Task.now(()))), Task.now(()))
 }
 
 object SmsCentralClientSpec extends Specification with MatcherMacros with ScalaCheck with TaskMatchers {
@@ -97,12 +98,12 @@ object SmsCentralClientSpec extends Specification with MatcherMacros with ScalaC
 
     "return a failure when an error is returned" in prop { (config: SmsCentralClient.Config, to: PhoneNumber, message: Message) =>
       val client = constantClient(config, Ok("500\r\nFailed"))
-      client.sendMessage(to, message).run must throwA[SmsCentralFailure]
+      client.sendMessage(to, message).unsafePerformSync must throwA[SmsCentralFailure]
     }
 
     "return an error if something else goes wrong" in prop { (config: SmsCentralClient.Config, to: PhoneNumber, message: Message) =>
       val client = constantClient(config, InternalServerError())
-      client.sendMessage(to, message).run must throwA[SmsCentralError]
+      client.sendMessage(to, message).unsafePerformSync must throwA[SmsCentralError]
     }
   }
 
@@ -153,7 +154,7 @@ object SmsCentralClientSpec extends Specification with MatcherMacros with ScalaC
 
     "return an error if no message is found" in prop { (config: SmsCentralClient.Config, message: MessageId) =>
       val client = constantClient(config, Ok(<messages/>))
-      client.messageStatus(message).run must throwA[SmsCentralError]
+      client.messageStatus(message).unsafePerformSync must throwA[SmsCentralError]
     }
 
     "return a failure if an error is received" in prop { (config: SmsCentralClient.Config, message: MessageId) =>
@@ -164,12 +165,12 @@ object SmsCentralClientSpec extends Specification with MatcherMacros with ScalaC
         </error>
       }
       val client = constantClient(config, failureResponse)
-      client.messageStatus(message).run must throwA[SmsCentralFailure]
+      client.messageStatus(message).unsafePerformSync must throwA[SmsCentralFailure]
     }
 
     "return an error if anything else goes wrong" in prop { (config: SmsCentralClient.Config, message: MessageId) =>
       val client = constantClient(config, InternalServerError("Error"))
-      client.messageStatus(message).run must throwA[SmsCentralError]
+      client.messageStatus(message).unsafePerformSync must throwA[SmsCentralError]
     }
   }
 }

@@ -1,6 +1,7 @@
 package com.github.hgiddens.ausms
 
-import argonaut.DecodeJson
+import cats.data.Xor
+import io.circe.{ Decoder, DecodingFailure, Encoder }
 import monocle.{ Iso, Prism }
 import monocle.macros.GenIso
 import scala.reflect.macros.blackbox
@@ -69,8 +70,11 @@ object MessageId {
   def _string: Iso[MessageId, String] =
     GenIso[MessageId, String]
 
-  implicit def decodeJson: DecodeJson[MessageId] =
-    DecodeJson(c => c.focus.as[String].map(apply))
+  implicit def decoder: Decoder[MessageId] =
+    Decoder[String].map(apply)
+
+  implicit def encoder: Encoder[MessageId] =
+    Encoder[String].contramap(_.value)
 
   implicit def equal: Equal[MessageId] =
     Equal.equalA
@@ -116,6 +120,18 @@ object PhoneNumber {
 
   def phoneNumber: Prism[String, PhoneNumber] =
     Prism[String, PhoneNumber](fromString)(_.value)
+
+  implicit def decoder: Decoder[PhoneNumber] =
+    Decoder.instance { c =>
+      for {
+        string <- c.as[String]
+        phone = fromString(string)
+        result <- Xor.fromOption(phone, DecodingFailure("Invalid phone number", c.history))
+      } yield result
+    }
+
+  implicit def encoder: Encoder[PhoneNumber] =
+    Encoder[String].contramap(_.value)
 
   implicit def equal: Equal[PhoneNumber] =
     Equal.equalA

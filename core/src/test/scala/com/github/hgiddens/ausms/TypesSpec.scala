@@ -1,6 +1,7 @@
 package com.github.hgiddens.ausms
 
 import Generators._
+import io.circe.syntax._
 import org.specs2.ScalaCheck
 import org.specs2.mutable.Specification
 import scalaz.Equal
@@ -21,7 +22,7 @@ object MessageSpec extends Specification with ScalaCheck {
   }
 }
 
-object PhoneNumberSpec extends Specification {
+object PhoneNumberSpec extends Specification with ScalaCheck {
   "fromString" should {
     "construct a value from a valid Australian mobile number" in {
       val validNumbers = Seq(
@@ -55,6 +56,12 @@ object PhoneNumberSpec extends Specification {
       "construct a PhoneNumber successfully" in {
         PhoneNumber("0400000000").value ==== "0400000000"
       }
+    }
+  }
+
+  "codec" should {
+    "obey law" in prop { phone: PhoneNumber =>
+      phone.asJson.as[PhoneNumber].toOption must beSome(phone)
     }
   }
 }

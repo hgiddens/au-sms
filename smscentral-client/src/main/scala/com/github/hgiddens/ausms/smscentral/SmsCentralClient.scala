@@ -3,6 +3,7 @@ package smscentral
 
 import java.util.UUID
 import org.http4s.{ Method, Request, Status, UrlForm }
+import org.http4s.Http4s._
 import org.http4s.Uri.uri
 import org.http4s.client.Client
 import org.http4s.scalaxml._
@@ -35,9 +36,10 @@ final class SmsCentralClient(client: Client, config: SmsCentralClient.Config) ex
         "MESSAGE_TEXT" -> message.value
       )
       request <- Request(Method.POST, base).withBody(params)
-      response <- client(request)
-      _ <- Task.fail(new SmsCentralError(s"Unexpected response status ${response.status.code}")).unlessM(response.status == Status.Ok)
-      body <- response.as[String]
+      body <- client.fetch(request) { response =>
+        if (response.status === Status.Ok) response.as[String]
+        else Task.fail(new SmsCentralError(s"Unexpected response status ${response.status.code}"))
+      }
       _ <- body match {
         case "0" => Task.now(())
         case ErrorRx(code, error) => Task.fail(new SmsCentralFailure(code.toInt, error))
@@ -72,8 +74,7 @@ final class SmsCentralClient(client: Client, config: SmsCentralClient.Config) ex
     val request = Request(Method.POST, base / "checkstatus").withBody(params)
 
     for {
-      response <- client(request)
-      elem <- response.as[Elem].or(Task.fail(new SmsCentralError("Failure parsing response as XML")))
+      elem <- client.fetchAs[Elem](request).or(Task.fail(new SmsCentralError("Failure parsing response as XML")))
       status <- parseSuccess(elem).or(Task.fail(handleFailure(elem)))
     } yield status
   }

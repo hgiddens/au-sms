@@ -1,8 +1,9 @@
 package com.github.hgiddens.ausms
 package telstra
 
-import argonaut.{ DecodeJson, DecodeResult, EncodeJson, Json }
-import argonaut.Argonaut._
+import cats.data.Xor
+import io.circe.{ Decoder, DecodingFailure, Encoder, Json }
+import io.circe.syntax._
 import java.util.Date
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success, Try }
@@ -11,15 +12,20 @@ import scalaz.Scalaz._
 
 private[ausms] final case class SendRequest(to: PhoneNumber, body: Message)
 private[ausms] object SendRequest {
-  implicit def encodeJson: EncodeJson[SendRequest] =
-    EncodeJson(request => Json("to" := request.to.value, "body" := request.body.value))
+  implicit def encoder: Encoder[SendRequest] =
+    Encoder.instance { request =>
+      Json.obj(
+        "to" -> request.to.value.asJson,
+        "body" -> request.body.value.asJson
+      )
+    }
 }
 
 private[ausms] final case class SendResponse(id: MessageId)
 private[ausms] object SendResponse {
-  implicit def decodeJson: DecodeJson[SendResponse] =
-    DecodeJson(c => for {
-      id <- (c --\ "messageId").as[MessageId]
+  implicit def decoder: Decoder[SendResponse] =
+    Decoder.instance(c => for {
+      id <- c.get[MessageId]("messageId")
     } yield apply(id))
 }
 
@@ -28,13 +34,13 @@ private[ausms] final case class TokenResponse(accessToken: String, duration: Dur
     Token(accessToken, new Date(base.getTime + duration.toMillis))
 }
 private[ausms] object TokenResponse {
-  implicit def decodeJson: DecodeJson[TokenResponse] =
-    DecodeJson(c => for {
-      accessToken <- (c --\ "access_token").as[String]
-      expiresStr <- (c --\ "expires_in").as[String]
+  implicit def decoder: Decoder[TokenResponse] =
+    Decoder.instance(c => for {
+      accessToken <- c.get[String]("access_token")
+      expiresStr <- c.get[String]("expires_in")
       expires <- Try(expiresStr.toInt) match {
-        case Success(s) => DecodeResult.ok(s.seconds)
-        case Failure(_) => DecodeResult.fail("Bad token expiry", (c --\ "expires_in").history)
+        case Success(s) => Xor.right(s.seconds)
+        case Failure(_) => Xor.left(DecodingFailure("Bad token expiry", c.downField("expires_in").history))
       }
     } yield apply(accessToken, expires))
 }
@@ -48,12 +54,12 @@ object MessageStatusResponse {
     case "READ" => DeliveryStatus.Read
   }
 
-  implicit def decodeJson: DecodeJson[MessageStatusResponse] =
-    DecodeJson(c => for {
-      statusString <- (c --\ "status").as[String]
+  implicit def decoder: Decoder[MessageStatusResponse] =
+    Decoder.instance(c => for {
+      statusString <- c.get[String]("status")
       status <- parseStatus.lift(statusString).cata(
-        DecodeResult.ok,
-        DecodeResult.fail(s"Unknown status '$statusString'", (c --\ "status").history)
+        Xor.right,
+        Xor.left(DecodingFailure(s"Unknown status '$statusString'", c.downField("status").history))
       )
-    } yield MessageStatusResponse(status))
+    } yield apply(status))
 }

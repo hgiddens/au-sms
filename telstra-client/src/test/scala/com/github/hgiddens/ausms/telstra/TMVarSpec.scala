@@ -1,7 +1,7 @@
 package com.github.hgiddens.ausms
 package telstra
 
-import org.scalacheck.{ Arbitrary, Gen }
+import org.scalacheck.{ Arbitrary, Cogen, Gen }
 import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.commands.Commands
 import org.specs2.ScalaCheck
@@ -11,7 +11,7 @@ import scalaz.Equal
 import scalaz.concurrent.Task
 import scalaz.Scalaz._
 
-final class TMVarCommands[A: Arbitrary: Equal, B: Arbitrary: Equal] extends Commands {
+final class TMVarCommands[A: Arbitrary: Cogen: Equal, B: Arbitrary: Equal] extends Commands {
   type State = A
   type Sut = TMVar[A]
 
@@ -20,7 +20,7 @@ final class TMVarCommands[A: Arbitrary: Equal, B: Arbitrary: Equal] extends Comm
   def destroySut(sut: Sut) =
     ()
   def genCommand(state: State) = {
-    val arbModify = Arbitrary.arbFunction1[A, Either[Throwable, (A, B)]](Arbitrary.arbEither)
+    val arbModify = Arbitrary.arbFunction1[A, Either[Throwable, (A, B)]](Arbitrary.arbEither, Cogen[A])
     Gen.oneOf(arbModify.arbitrary.map(Modify.apply), Gen.const(Read))
   }
   def genInitialState =
@@ -28,14 +28,14 @@ final class TMVarCommands[A: Arbitrary: Equal, B: Arbitrary: Equal] extends Comm
   def initialPreCondition(state: State) =
     true
   def newSut(state: State) =
-    TMVar.newTMVar(state).run
+    TMVar.newTMVar(state).unsafePerformSync
 
   private[this] case object Read extends SuccessCommand {
     type Result = A
     def nextState(s: State) = s
     def preCondition(s: State) = true
     def postCondition(s: State, result: Result) = s === result
-    def run(sut: Sut) = sut.read.run
+    def run(sut: Sut) = sut.read.unsafePerformSync
   }
 
   // TODO: Exception
@@ -49,7 +49,7 @@ final class TMVarCommands[A: Arbitrary: Equal, B: Arbitrary: Equal] extends Comm
         case (Left(expected), Failure(actual)) => expected == actual
         case _ => false
       }
-    def run(sut: Sut) = sut.modify(a => f(a).fold(Task.fail, Task.now)).run
+    def run(sut: Sut) = sut.modify(a => f(a).fold(Task.fail, Task.now)).unsafePerformSync
   }
 }
 
@@ -60,7 +60,7 @@ object TMVarSpec extends Specification with ScalaCheck {
         sut <- TMVar.newEmptyTMVar[Int]
         _ <- sut.put(a)
         result <- sut.read
-      } yield result).run ==== a
+      } yield result).unsafePerformSync ==== a
     }
 
     "allow the value to be modified" in prop { (a: Int, f: Int => (Int, Int)) =>
@@ -69,7 +69,7 @@ object TMVarSpec extends Specification with ScalaCheck {
         _ <- sut.put(a)
         result <- sut.modify(i => Task.now(f(i)))
         modified <- sut.read
-      } yield (modified, result)).run ==== f(a)
+      } yield (modified, result)).unsafePerformSync ==== f(a)
     }
 
     "preserve the old value on exception" in prop { (a: Int, t: Throwable) =>
@@ -78,7 +78,7 @@ object TMVarSpec extends Specification with ScalaCheck {
         _ <- sut.put(a)
         failure <- sut.modify(_ => Task.fail(t)).attempt
         result <- sut.read
-      } yield (failure.swap.toOption, result)).run ==== (t.some -> a)
+      } yield (failure.swap.toOption, result)).unsafePerformSync ==== (t.some -> a)
     }
 
     "behave concurrently" in new TMVarCommands[Int, Int].property(threadCount = 4)

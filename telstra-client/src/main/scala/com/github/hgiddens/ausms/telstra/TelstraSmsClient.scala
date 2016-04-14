@@ -3,12 +3,11 @@ package telstra
 
 import TelstraSmsClient.Failure
 import JsonHelpers._
-import argonaut.{ DecodeJson, EncodeJson }
+import io.circe.{ Decoder, Encoder }
 import java.util.Date
 import org.http4s.{ Charset, EntityDecoder, EntityEncoder, MediaType, Method, OAuth2BearerToken, Request, Status }
 import org.http4s.Http4s._
 import org.http4s.Uri.uri
-import org.http4s.argonaut.{ jsonEncoderOf, jsonOf }
 import org.http4s.headers.{ Authorization, `Content-Type` }
 import org.http4s.client.Client
 import org.log4s.getLogger
@@ -16,10 +15,32 @@ import scala.concurrent.duration._
 import scalaz.Scalaz._
 import scalaz.concurrent.Task
 
+// From CirceInstances
 private[telstra] object JsonHelpers {
-  implicit def jsonEntityDecoder[A: DecodeJson]: EntityDecoder[A] =
+  import io.circe.{ Json, Printer }
+  import io.circe.jawn.CirceSupportParser.facade
+  import org.http4s.{ DecodeResult, InvalidMessageBodyFailure }
+
+  private implicit val json: EntityDecoder[Json] = org.http4s.jawn.jawnDecoder(facade)
+  private def jsonOf[A](implicit decoder: Decoder[A]): EntityDecoder[A] =
+    json.flatMapR { json =>
+      decoder.decodeJson(json).fold(
+        failure =>
+          DecodeResult.failure(InvalidMessageBodyFailure(s"Could not decode JSON: $json", Some(failure))),
+        DecodeResult.success(_)
+      )
+    }
+
+  private implicit val jsonEncoder: EntityEncoder[Json] =
+    EntityEncoder[String].contramap[Json] { json =>
+      Printer.noSpaces.pretty(json)
+    }.withContentType(`Content-Type`(MediaType.`application/json`))
+  private def jsonEncoderOf[A](implicit encoder: Encoder[A]): EntityEncoder[A] =
+    jsonEncoder.contramap[A](encoder.apply)
+
+  implicit def jsonEntityDecoder[A: Decoder]: EntityDecoder[A] =
     jsonOf
-  implicit def jsonEntityEncoder[A: EncodeJson]: EntityEncoder[A] =
+  implicit def jsonEntityEncoder[A: Encoder]: EntityEncoder[A] =
     jsonEncoderOf
 }
 
@@ -66,10 +87,10 @@ final class TelstraSmsClient(client: Client, key: String, secret: String, privat
 
     val run = for {
       now <- Task.delay(new Date)
-      response <- client(request)
-      status = response.status
-      _ <- Task.fail(Failure(s"Unexpected response with code $status")).unlessM(status == Status.Ok)
-      tokenResponse <- response.as[TokenResponse]
+      tokenResponse <- client.get(request) { response =>
+        if (response.status === Status.Ok) response.as[TokenResponse]
+        else Task.fail(Failure(s"Unexpected response with code ${response.status}"))
+      }
       _ <- Task.delay(log.debug(s"Token refreshed, expiring in ${tokenResponse.duration.toSeconds}s"))
     } yield tokenResponse.asToken(now)
 
@@ -90,10 +111,10 @@ final class TelstraSmsClient(client: Client, key: String, secret: String, privat
 
     def run(token: Token) =
       for {
-        response <- client(request(token))
-        status = response.status
-        _ <- Task.fail(Failure(s"Unexpected response with code $status")).unlessM(status == Status.Accepted)
-        sent <- response.as[SendResponse]
+        sent <- client.fetch(request(token)) { response =>
+          if (response.status === Status.Accepted) response.as[SendResponse]
+          else Task.fail(Failure(s"Unexpected response with code ${response.status}"))
+        }
         _ <- Task.delay(log.debug(s"Message sent to ${to.shows} with id ${sent.id.shows}"))
       } yield sent.id
 
@@ -111,9 +132,10 @@ final class TelstraSmsClient(client: Client, key: String, secret: String, privat
 
     def run(token: Token) =
       for {
-        response <- client(request(token))
-        _ <- Task.fail(Failure(s"Unexpected response with code ${response.status}")).unlessM(response.status == Status.Ok)
-        status <- response.as[MessageStatusResponse]
+        status <- client.fetch(request(token)) { response =>
+          if (response.status === Status.Ok) response.as[MessageStatusResponse]
+          else Task.fail(Failure(s"Unexpected response with code ${response.status}"))
+        }
         _ <- Task.delay(log.debug(s"Message status of ${message.shows} is ${status.status.shows}"))
       } yield status.status
 

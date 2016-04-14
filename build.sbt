@@ -19,7 +19,10 @@ scalacOptions in Test in ThisBuild += "-Yrangepos"
 
 libraryDependencies in ThisBuild += compilerPlugin("org.spire-math" %% "kind-projector" % "0.7.1")
 dependencyOverrides in ThisBuild ++= Set(
-  "org.scalaz" %% "scalaz-core" % "7.1.7"
+  "org.log4s" %% "log4s" % Versions.log4s,
+  "org.scala-lang" % "scala-library" % scalaVersion.value,
+  "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+  "org.scalaz" %% "scalaz-core" % Versions.scalaz
 )
 
 autoAPIMappings in ThisBuild := true

@@ -13,7 +13,7 @@ object TelstraSmsClientSpec extends Specification with MatcherMacros with ScalaC
   "freshen" should {
     "refresh the token when it's expired" in {
       (for {
-        client <- TelstraSmsClient(TestClient, TestClient.key, TestClient.secret)
+        client <- TelstraSmsClient(TestClient.client, TestClient.key, TestClient.secret)
         _ <- client.freshen(_ => Task.now(()))
         token <- client.currentToken.read
       } yield token) must returnValue(matchA[Token].value(TestClient.accessToken))
@@ -21,7 +21,7 @@ object TelstraSmsClientSpec extends Specification with MatcherMacros with ScalaC
 
     "pass the new token to the callback when it's expired" in {
       (for {
-        client <- TelstraSmsClient(TestClient, TestClient.key, TestClient.secret)
+        client <- TelstraSmsClient(TestClient.client, TestClient.key, TestClient.secret)
         token <- client.freshen(Task.now)
       } yield token) must returnValue(matchA[Token].value(TestClient.accessToken))
     }
@@ -31,7 +31,7 @@ object TelstraSmsClientSpec extends Specification with MatcherMacros with ScalaC
       (for {
         now <- Task.delay(new Date)
         token <- TMVar.newTMVar(Token(validToken, new Date(now.getTime + 3600000)))
-        client = new TelstraSmsClient(TestClient, TestClient.key, TestClient.secret, token)
+        client = new TelstraSmsClient(TestClient.client, TestClient.key, TestClient.secret, token)
         _ <- client.freshen(_ => Task.now(()))
         updated <- client.currentToken.read
       } yield updated) must returnValue(matchA[Token].value(validToken))
@@ -41,7 +41,7 @@ object TelstraSmsClientSpec extends Specification with MatcherMacros with ScalaC
   "requesting a token" should {
     "return a token constructed from the returned access token" in {
       (for {
-        client <- TelstraSmsClient(TestClient, TestClient.key, TestClient.secret)
+        client <- TelstraSmsClient(TestClient.client, TestClient.key, TestClient.secret)
         token <- client.token
       } yield token) must returnValue(matchA[Token].value(TestClient.accessToken))
     }
@@ -50,7 +50,7 @@ object TelstraSmsClientSpec extends Specification with MatcherMacros with ScalaC
   "sending a message" should {
     "return the message id for the sent message" in prop { (phoneNumber: PhoneNumber, message: Message) =>
       (for {
-        client <- TelstraSmsClient(TestClient, TestClient.key, TestClient.secret)
+        client <- TelstraSmsClient(TestClient.client, TestClient.key, TestClient.secret)
         messageId <- client.sendMessage(phoneNumber, message)
       } yield messageId) must returnValue(be_===(MessageId(TestClient.messageId)))
     }
@@ -59,7 +59,7 @@ object TelstraSmsClientSpec extends Specification with MatcherMacros with ScalaC
   "check a message's status" should {
     "return the status for the sent message" in {
       (for {
-        client <- TelstraSmsClient(TestClient, TestClient.key, TestClient.secret)
+        client <- TelstraSmsClient(TestClient.client, TestClient.key, TestClient.secret)
         messageId = MessageId(TestClient.messageId)
         status <- client.messageStatus(messageId)
       } yield status) must returnValue(DeliveryStatus.Delivered)
