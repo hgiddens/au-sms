@@ -74,7 +74,7 @@ final class SmsCentralClient(client: Client, config: SmsCentralClient.Config) ex
     val request = Request(Method.POST, base / "checkstatus").withBody(params)
 
     for {
-      elem <- client.fetchAs[Elem](request).or(Task.fail(new SmsCentralError("Failure parsing response as XML")))
+      elem <- client.expect[Elem](request).or(Task.fail(new SmsCentralError("Failure parsing response as XML")))
       status <- parseSuccess(elem).or(Task.fail(handleFailure(elem)))
     } yield status
   }

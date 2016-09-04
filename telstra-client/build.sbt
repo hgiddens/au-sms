@@ -6,5 +6,5 @@ libraryDependencies ++= Seq(
   "org.http4s" %% "http4s-dsl" % Versions.http4s % Test,
   "org.http4s" %% "http4s-jawn" % Versions.http4s,
   "org.log4s" %% "log4s" % Versions.log4s,
-  "org.slf4j" % "slf4j-simple" % "1.7.18" % Test
+  "org.slf4j" % "slf4j-simple" % Versions.slf4j % Test
 )
